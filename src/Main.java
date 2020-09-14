@@ -1,6 +1,11 @@
 public class Main {
 
     public static void main(String[] args) {
-	    System.out.println("Hello World");
+        DataManagement dataManagement = new DataManagement("map.osm");
+
+        dataManagement.show();
+        dataManagement.createFile();
+        dataManagement.writeData();
+        dataManagement.createDataFile();
     }
 }
