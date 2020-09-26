@@ -4,27 +4,76 @@ import java.util.List;
 
 public class DataManagement {
 
+    File file;
+    List<Node> nodes;
+    Node node;
 
-    private String filePath;
-    private BufferedReader reader;
-    private int count = 0;
-    private List<Node> nodes = new ArrayList<>();
 
-    public DataManagement(String filePath){
-        this.filePath = filePath;
+    public DataManagement(File file){
+        this.file = file;
+
+        nodes = new ArrayList<>();
     }
 
-    public String getAttr(String line, String attribute){
-        String id = "";
+    public void readFile() throws IOException {
+        boolean foundWayTag = false;
+        BufferedReader br = new BufferedReader(new FileReader(file));
+
+        String line;
+
+        while ((line = br.readLine()) != null){
+
+            /* skip these lines from file*/
+            if(line.contains("</way>")) foundWayTag = false;
+
+            if(foundWayTag) continue;
+
+            if(line.contains("<way")){
+                foundWayTag = true;
+                continue;
+            }
+            /* up to here */
+
+            //don't skip these lines (these xml tags)
+            if(!line.contains("<node") && !line.contains("</node>") && !line.contains("<tag")) continue;
+
+
+            //get attributes from node
+            if(line.contains("<node")){
+                String id = getNodeAttribute(line,"id");
+                String lat = getNodeAttribute(line,"lat");
+                String lon = getNodeAttribute(line,"lon");
+                node = new Node(id, lat, lon);
+            }
+
+            //get name attribute from node's tag
+            if(line.contains("<tag") && line.contains("k=\"name\"")){
+                node.setName(getTagAttribute(line, "v"));
+            }
+
+            //add node when is a single xml tag or when the tag closes
+            if(line.contains("</node>") || (line.contains("<node") && line.contains("/>"))){
+                nodes.add(node);
+            }
+
+        }
+    }
+
+    private String getNodeAttribute(String line, String attribute){
+        String attr = "";
+        attribute = attribute + "=\"";
 
         if(line.contains(" " + attribute)){
-            int indexFirst = line.indexOf(attribute) + attribute.length() + 2;
+            //find the starting point of the searching attribute
+            int indexFirst = line.indexOf(attribute) + attribute.length();
 
+            //cut the string from the starting point of the attribute's value till the end
             String tmp = line.substring(indexFirst);
 
+            //find the last index of the attributes value
             int indexLast;
-            if(!attribute.equals("lon"))
-                 indexLast = tmp.indexOf(" ") - 1;
+            if(!attribute.equals("lon=\""))
+                indexLast = tmp.indexOf(" ") - 1;
             else{
                 if(tmp.contains("/")){
                     indexLast = tmp.indexOf("/") - 1;
@@ -34,73 +83,55 @@ public class DataManagement {
                 }
             }
 
-            id = tmp.substring(0, indexLast);
+            //take attribute's value
+            attr = tmp.substring(0, indexLast);
 
         }
 
-        return id;
+        return attr;
+
     }
 
-    public void skipLines(int n, BufferedReader reader) throws IOException {
-        for (int i = 0; i < n; i++)
-            reader.readLine();
-    }
+    private String getTagAttribute(String line, String attribute){
+        String attr = "";
+        attribute = attribute + "=\"";
 
-    public void show(){
-        try {
-            reader = new BufferedReader(new FileReader(filePath));
+        //check if value exists (not required)
+        if(line.contains("v=\"")){
+            int indexFirst, indexLast;
+            String tmp;
 
-            skipLines(3, reader);
-
-            String line = reader.readLine();
-
-            while (line != null) {
-//                System.out.println("id:" + getAttr(line, "id") + " lat: " + getAttr(line, "lat")
-//                + " lon: " + getAttr(line, "lon"));
-
-                Node node = new Node(getAttr(line, "id"),  getAttr(line, "lon"),  getAttr(line, "lat"));
-
-                if(!(getAttr(line, "lon").isEmpty() && getAttr(line, "lat").isEmpty()))
-                    nodes.add(node);
-
-                // read next line
-                line = reader.readLine();
-                count++;
-            }
-            reader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            indexFirst = line.indexOf(attribute) + attribute.length();
+            tmp = line.substring(indexFirst);
+            indexLast = tmp.indexOf("/") - 1;
+            attr = tmp.substring(0, indexLast);
         }
+
+        return attr;
     }
 
-    public void createFile(){
+    public void writeNodes(String filePath){
         try {
-            File myObj = new File("temp.txt");
-            if (myObj.createNewFile()) {
-                System.out.println("File created: " + myObj.getName());
-            } else {
-                System.out.println("File already exists.");
-            }
-        } catch (IOException e) {
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-        }
-    }
+            FileWriter myWriter = new FileWriter(filePath);
 
-    public void writeData(){
-        try {
-            FileWriter myWriter = new FileWriter("temp.txt");
+            for(Node node: nodes){
+                if(node.getName().isEmpty()){
+                    myWriter.write(node.getId() + " " + node.getLat() + " " + node.getLon() + "\n");
+                }
+                else {
+                    myWriter.write(node.getId() + " " + node.getName().replace(" ", "_") + " " + node.getLat() + " " + node.getLon() + "\n");
+                }
 
-            for(Node x: nodes){
-                myWriter.write( x.getId() + " " + x.getLat() + " " + x.getLon() + " " + "\n" );
             }
 
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
+
         } catch (IOException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
         }
     }
+
 
 }

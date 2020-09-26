@@ -1,15 +1,23 @@
 public class Node {
 
-    private String id;
-    private String name;
-    private String lon;
-    private String lat;
+    String id;
+    String name = "";
+    String lat;
+    String lon;
 
-    public Node(String id, String lon, String lat) {
+    public Node(){}
+
+    public Node(String id, String name, String lat, String lon) {
         this.id = id;
-        this.name = "name";
-        this.lon = lon;
+        this.name = name;
         this.lat = lat;
+        this.lon = lon;
+    }
+
+    public Node(String id, String lat, String lon){
+        this.id = id;
+        this.lat = lat;
+        this.lon = lon;
     }
 
     public String getId() {
@@ -28,19 +36,19 @@ public class Node {
         this.name = name;
     }
 
-    public String getLon() {
-        return lon;
-    }
-
-    public void setLon(String lon) {
-        this.lon = lon;
-    }
-
     public String getLat() {
         return lat;
     }
 
     public void setLat(String lat) {
         this.lat = lat;
+    }
+
+    public String getLon() {
+        return lon;
+    }
+
+    public void setLon(String lon) {
+        this.lon = lon;
     }
 }
