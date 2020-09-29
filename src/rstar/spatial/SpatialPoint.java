@@ -6,7 +6,7 @@ import rstar.interfaces.IDtoConvertible;
 public class SpatialPoint implements IDtoConvertible {
     private int _dimension;
     private double[] _cords;
-    private String  _oid;
+    private long  _oid;
     private String name;
 
     public SpatialPoint() {
@@ -14,16 +14,18 @@ public class SpatialPoint implements IDtoConvertible {
 
     public SpatialPoint(int dimension) {
         this._dimension = dimension;
-        this._oid = "";
+        this._oid = -1;
+        this.name = "-";
     }
 
     public SpatialPoint(double[] cords) {
         this._cords = cords;
         this._dimension = cords.length;
-        this._oid = "";
+        this._oid = -1;
+        this.name = "-";
     }
 
-    public SpatialPoint(double[] cords, String oid, String name) {
+    public SpatialPoint(double[] cords, long oid, String name) {
         this._cords = cords;
         this._dimension = cords.length;
         this._oid = oid;
@@ -48,11 +50,11 @@ public class SpatialPoint implements IDtoConvertible {
         return _cords;
     }
 
-    public String getOid() {
+    public long getOid() {
         return _oid;
     }
 
-    public void setOid(String oid) {
+    public void setOid(long oid) {
         this._oid = oid;
     }
 
@@ -75,6 +77,7 @@ public class SpatialPoint implements IDtoConvertible {
     @Override
     public String toString() {
         StringBuilder str = new StringBuilder("[");
+        str.append(_oid).append(",");
         for (double cord : _cords) {
             str.append(cord).append(",");
         }

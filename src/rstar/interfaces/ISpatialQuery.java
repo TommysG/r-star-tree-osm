@@ -18,7 +18,7 @@ public interface ISpatialQuery {
      * @param point the point to be searched
      * @return float oid
      */
-    String pointSearch(SpatialPoint point);
+    long pointSearch(SpatialPoint point);
 
     /**
      * returns all points in distance <i>range</i> of

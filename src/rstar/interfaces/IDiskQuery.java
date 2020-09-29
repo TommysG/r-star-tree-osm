@@ -16,7 +16,7 @@ public interface IDiskQuery {
 
     PointDTO loadPoint(long pointer);
 
-    int saveTree(TreeDTO tree, File saveFile);
-
-    TreeDTO loadTree(File saveFile);
+//    int saveTree(TreeDTO tree, File saveFile);
+//
+//    TreeDTO loadTree(File saveFile);
 }

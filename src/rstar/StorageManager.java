@@ -12,6 +12,7 @@ import util.Constants;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 
 /**
  * provides all disk related functionality like
@@ -20,14 +21,38 @@ import java.nio.channels.FileChannel;
 public class StorageManager implements IDiskQuery {
     RandomAccessFile dataStore;
     FileChannel dataChannel;
+    int i = 0;
+    long MAX_SIZE_BLOCK;
+    int dimension;
 
-    public StorageManager() {
+    public StorageManager(long MAX_SIZE_BLOCK, int dimension) {
         try {
+            this.MAX_SIZE_BLOCK = MAX_SIZE_BLOCK;
+            this.dimension = dimension;
             dataStore = new RandomAccessFile(Constants.DATA_FILE, "rw");
             dataChannel = dataStore.getChannel();
+            metaData();
         } catch (FileNotFoundException e) {
             System.err.println("Data File failed to be loaded/created. Exiting");
             System.exit(1);
+        }
+    }
+
+    public void metaData(){
+        try {
+            dataStore.write(i);
+            dataStore.write(dimension);
+            dataStore.writeLong(MAX_SIZE_BLOCK);
+
+            while(dataStore.length() < MAX_SIZE_BLOCK){
+                dataStore.writeByte(0);
+            }
+
+            i++;
+            dataStore.write(i);
+            i++;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -96,13 +121,34 @@ public class StorageManager implements IDiskQuery {
             long pos = dataStore.length();
             dataStore.seek(pos);
 
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(pointDTO);
-            oos.flush();
+            long oid = pointDTO.oid;
+            String name = pointDTO.name;
+            double lat = pointDTO.coords[0];
+            double lon = pointDTO.coords[1];
 
-            dataChannel.write(ByteBuffer.wrap(bos.toByteArray()));
-            oos.close();
+            if( pos + 24 + name.getBytes().length > MAX_SIZE_BLOCK * i ){
+                while(dataStore.length() < MAX_SIZE_BLOCK * i){
+                    dataStore.writeByte(0);
+                }
+                i++;
+                dataStore.write(i);
+            }
+
+            pos = dataStore.length();
+            dataStore.seek(pos);
+
+            dataStore.writeLong(oid);
+
+            if(!pointDTO.name.isEmpty())
+                dataStore.writeUTF(name);
+            else
+                dataStore.writeUTF("-");
+
+            dataStore.writeDouble(lat);
+            dataStore.writeDouble(lon);
+
+            System.out.println(pointDTO.oid + " size: " + dataStore.length());
+
             return pos;
         } catch (IOException e) {
             System.err.println("Exception occurred while saving data to disk.");
@@ -121,12 +167,18 @@ public class StorageManager implements IDiskQuery {
     public PointDTO loadPoint(long pointer) {
         try {
             dataStore.seek(pointer);
-            ObjectInputStream ois = getPointObjectStream();
-            PointDTO pointDTO = (PointDTO) ois.readObject();
-            ois.close();
-            return pointDTO;
+            DataInputStream ois = getPointObjectStream();
 
-        } catch (IOException | ClassNotFoundException e) {
+            long oid = ois.readLong();
+            String name = ois.readUTF();
+            double lat = ois.readDouble();
+            double lon = ois.readDouble();
+
+            double[] coords = {lat,lon};
+
+            return new PointDTO(oid, name, coords);
+
+        } catch (IOException e) {
             System.err.println("Exception occurred while loading point from disk.");
         }
         return null;
@@ -154,53 +206,53 @@ public class StorageManager implements IDiskQuery {
         return null;
     }
 
-    /**
-     * saves the R* Tree to saveFile.
-     * doesn't use RandomAccessFile
-     * @param tree the DTO of the tree to be saved
-     * @param saveFile saveNode file location
-     * @return 1 is successful, else -1
-     */
-    @Override
-    public int saveTree(TreeDTO tree, File saveFile) {
-        int status = -1;
-        try {
-            if(saveFile.exists()) {
-                saveFile.delete();
-            }
+//    /**
+//     * saves the R* Tree to saveFile.
+//     * doesn't use RandomAccessFile
+//     * @param tree the DTO of the tree to be saved
+//     * @param saveFile saveNode file location
+//     * @return 1 is successful, else -1
+//     */
+//    @Override
+//    public int saveTree(TreeDTO tree, File saveFile) {
+//        int status = -1;
+//        try {
+//            if(saveFile.exists()) {
+//                saveFile.delete();
+//            }
+//
+//            FileOutputStream fos = new FileOutputStream(saveFile);
+//            ObjectOutputStream oos = new ObjectOutputStream(fos);
+//
+//            oos.writeObject(tree);
+//            oos.flush();
+//            oos.close();
+//            status = 1;             // successful saveNode
+//        } catch (IOException e) {
+//            System.err.println("Error while saving Tree to " + saveFile.toURI());
+//        }
+//        return status;
+//    }
 
-            FileOutputStream fos = new FileOutputStream(saveFile);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-
-            oos.writeObject(tree);
-            oos.flush();
-            oos.close();
-            status = 1;             // successful saveNode
-        } catch (IOException e) {
-            System.err.println("Error while saving Tree to " + saveFile.toURI());
-        }
-        return status;
-    }
-
-    /**
-     * loads a R* Tree from disk
-     * @param saveFile the file to loadNode the tree from
-     * @return DTO of the loaded R* Tree, null if none found
-     * @throws FileNotFoundException
-     */
-    @Override
-    public TreeDTO loadTree(File saveFile) {
-        try {
-            FileInputStream fis = new FileInputStream(saveFile);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-
-            return (TreeDTO) ois.readObject();
-
-        } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Exception while loading tree from " + saveFile);
-        }
-        return null;
-    }
+//    /**
+//     * loads a R* Tree from disk
+//     * @param saveFile the file to loadNode the tree from
+//     * @return DTO of the loaded R* Tree, null if none found
+//     * @throws FileNotFoundException
+//     */
+//    @Override
+//    public TreeDTO loadTree(File saveFile) {
+//        try {
+//            FileInputStream fis = new FileInputStream(saveFile);
+//            ObjectInputStream ois = new ObjectInputStream(fis);
+//
+//            return (TreeDTO) ois.readObject();
+//
+//        } catch (IOException | ClassNotFoundException e) {
+//            System.err.println("Exception while loading tree from " + saveFile);
+//        }
+//        return null;
+//    }
 
     public String constructFilename(long nodeId) {
         return Constants.TREE_DATA_DIRECTORY + "/" + Constants.NODE_FILE_PREFIX + nodeId + Constants.NODE_FILE_SUFFIX;
@@ -212,8 +264,8 @@ public class StorageManager implements IDiskQuery {
         return Long.parseLong(filename.substring((Constants.TREE_DATA_DIRECTORY+"/"+Constants.NODE_FILE_PREFIX).length(), i2));
     }
 
-    private ObjectInputStream getPointObjectStream() throws IOException {
-        return new ObjectInputStream(new InputStream() {
+    private DataInputStream getPointObjectStream() throws IOException {
+        return new DataInputStream(new InputStream() {
             @Override
             public int read() throws IOException {
                 return dataStore.read();

@@ -28,15 +28,17 @@ public class RStarTree implements ISpatialQuery, IDtoConvertible {
     private long rootPointer = -1;
     private RStarSplit splitManager;
 
-    private String _pointSearchResult = "";
+    private long _pointSearchResult = -1;
+    private PointDTO _pointSearchObject = new PointDTO();
     private ArrayList<SpatialPoint> _rangeSearchResult;
     private List<SpatialPoint> _knnSearchResult;
     private int bestSortOrder = -1;
+    private long MAX_BLOCK_SIZE = 32 * 1024;
 
     public RStarTree(int dimension) {
         this.dimension = dimension;
         this.saveFile = new File(Constants.TREE_FILE);
-        this.storage = new StorageManager();
+        this.storage = new StorageManager(MAX_BLOCK_SIZE, dimension);
         this.splitManager = new RStarSplit(dimension, storage);
 
         storage.createDataDir(saveFile);
@@ -110,8 +112,8 @@ public class RStarTree implements ISpatialQuery, IDtoConvertible {
      * @return oid of the point if found, else an empty string.
      */
     @Override
-    public String pointSearch(SpatialPoint point) {
-        _pointSearchResult = "";
+    public long pointSearch(SpatialPoint point) {
+        _pointSearchResult = -1;
         loadRoot();
         _pointSearch(root, point);
         return _pointSearchResult;
@@ -139,12 +141,17 @@ public class RStarTree implements ISpatialQuery, IDtoConvertible {
                     }
                     if (found) {
                         _pointSearchResult = dto.oid;
+
+                        //found object
+                        _pointSearchObject.oid = dto.oid;
+                        _pointSearchObject.name = dto.name;
+                        _pointSearchObject.coords = dto.coords;
                         break;
                     }
                 }
             } else {
                 for (Long pointer : start.childPointers) {
-                    if(!_pointSearchResult.isEmpty())         // point found
+                    if(_pointSearchResult != -1)         // point found
                         break;
 
                     try {
@@ -157,6 +164,10 @@ public class RStarTree implements ISpatialQuery, IDtoConvertible {
                 }
             }
         }
+    }
+
+    public PointDTO getPoint(){
+        return _pointSearchObject;
     }
 
     /**
@@ -220,7 +231,7 @@ public class RStarTree implements ISpatialQuery, IDtoConvertible {
     public List<SpatialPoint> knnSearch(SpatialPoint center, int k) {
         loadRoot();
         _knnSearch(root, center, k, 1);
-        _rangeSearchResult = new ArrayList<SpatialPoint>();
+        _rangeSearchResult = new ArrayList<>();
         return _knnSearchResult;
     }
 
@@ -414,9 +425,9 @@ public class RStarTree implements ISpatialQuery, IDtoConvertible {
      * saves the tree details to disk
      * @return 1 if successful, -1 otherwise
      */
-    public int save() {
-        return storage.saveTree(this.toDTO(), saveFile);
-    }
+//    public int save() {
+//        return storage.saveTree(this.toDTO(), saveFile);
+//    }
 
     /**
      * converts this tree to its DTO representation

@@ -40,19 +40,7 @@ public class Trace {
             }
         }
     }
-	public void traceInline(String str) {
-		if(VERBOSE_MODE == 1)
-			System.out.print(str);
-		
-		if(WRITE_LOG == 1){
-			try {
-				fc.write(ByteBuffer.wrap((str).getBytes()));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-	
+
 	public void traceError(String str) {
 		if(VERBOSE_MODE == 1)
 			System.err.println(str);
